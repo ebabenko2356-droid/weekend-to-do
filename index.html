@@ -170,7 +170,7 @@
         saveAndRender();
     }
 
-    window.undoAction = function(0) {
+    window.undoAction = function() {
         if (historyStack.length === 0) return;
         completedTasks = historyStack.pop();
         saveAndRender();
