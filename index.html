@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Tracker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background-color: #161b22;
+            border: 1px solid #1f6feb;
+            border-radius: 6px;
+            padding: 20px;
+            width: 380px;
+            box-shadow: 0 4px 16px rgba(31, 111, 235, 0.2);
+        }
+        h3 {
+            margin-top: 0;
+            font-size: 16px;
+            color: #58a6ff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .progress-container {
+            background-color: #21262d;
+            border-radius: 10px;
+            height: 10px;
+            width: 100%;
+            margin-bottom: 15px;
+            overflow: hidden;
+            border: 1px solid #30363d;
+        }
+        .progress-bar {
+            background-color: #1f6feb;
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .task-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 15px 0;
+        }
+        .task-item {
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+        .task-item input {
+            margin-right: 10px;
+            accent-color: #1f6feb;
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+        .task-item.completed span {
+            text-decoration: line-through;
+            color: #8b949e;
+        }
+        .buttons-container {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            flex: 1;
+            background-color: #21262d;
+            border: 1px solid #30363d;
+            color: #c9d1d9;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .btn:hover:not(:disabled) {
+            background-color: #30363d;
+            border-color: #58a6ff;
+        }
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn-danger:hover:not(:disabled) {
+            background-color: #da3633;
+            border-color: #f85149;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h3 id="counter"><span>Progress</span> <span>0 / 7</span></h3>
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <ul class="task-list" id="taskList">
+        <!-- Tasks will be generated dynamically -->
+    </ul>
+    <div class="buttons-container">
+        <button class="btn" id="undoBtn" onclick="undoAction()" disabled>Undo Last Action</button>
+        <button class="btn btn-danger" id="resetBtn" onclick="resetAll()" disabled>Reset All</button>
+    </div>
+</div>
+
+<script>
+    const tasks = [
+        "Gather Podcasts",
+        "YouTube",
+        "Netflix",
+        "Notion renews",
+        "Gather grammar books and websites",
+        "Create a vocabulary list & Multitran folders",
+        "Revision of vocabulary"
+    ];
+
+    const taskListEl = document.getElementById('taskList');
+    const progressBarEl = document.getElementById('progressBar');
+    const counterEl = document.getElementById('counter');
+    const undoBtnEl = document.getElementById('undoBtn');
+    const resetBtnEl = document.getElementById('resetBtn');
+
+    // Load state from localStorage
+    let completedTasks = JSON.parse(localStorage.getItem('github_widget_tasks')) || Array(tasks.length).fill(false);
+    let historyStack = JSON.parse(localStorage.getItem('github_widget_history')) || [];
+
+    function render() {
+        taskListEl.innerHTML = '';
+        let completedCount = 0;
+
+        tasks.forEach((task, index) => {
+            const isChecked = completedTasks[index];
+            if (isChecked) completedCount++;
+
+            const li = document.createElement('li');
+            li.className = `task-item ${isChecked ? 'completed' : ''}`;
+            
+            li.innerHTML = `
+                <input type="checkbox" id="task-${index}" ${isChecked ? 'checked' : ''} onchange="toggleTask(${index})">
+                <label for="task-${index}"><span>${task}</span></label>
+            `;
+            taskListEl.appendChild(li);
+        });
+
+        const percentage = (completedCount / tasks.length) * 100;
+        progressBarEl.style.width = `${percentage}%`;
+        counterEl.innerHTML = `<span>Progress</span> <span>${completedCount} / ${tasks.length}</span>`;
+        
+        // Enable/disable buttons based on availability
+        undoBtnEl.disabled = historyStack.length === 0;
+        resetBtnEl.disabled = completedCount === 0 && historyStack.length === 0;
+    }
+
+    window.toggleTask = function(index) {
+        historyStack.push([...completedTasks]);
+        if (historyStack.length > 20) historyStack.shift();
+
+        completedTasks[index] = !completedTasks[index];
+        saveAndRender();
+    }
+
+    window.undoAction = function(0) {
+        if (historyStack.length === 0) return;
+        completedTasks = historyStack.pop();
+        saveAndRender();
+    }
+
+    window.resetAll = function() {
+        historyStack.push([...completedTasks]);
+        if (historyStack.length > 20) historyStack.shift();
+
+        completedTasks = Array(tasks.length).fill(false);
+        saveAndRender();
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('github_widget_tasks', JSON.stringify(completedTasks));
+        localStorage.setItem('github_widget_history', JSON.stringify(historyStack));
+        render();
+    }
+
+    render();
+</script>
+
+</body>
+</html>
